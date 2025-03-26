@@ -32,10 +32,10 @@
 - [x] Créer l'algorithme génétique pour les combinaisons rares
 
 ## Interface utilisateur
-- [ ] Concevoir les maquettes de l'interface
-- [ ] Implémenter le design system avec Material-UI
-- [ ] Développer les composants React
-- [ ] Créer les visualisations avancées
+- [x] Concevoir les maquettes de l'interface
+- [x] Implémenter le design system avec Material-UI
+- [x] Développer les composants React
+- [x] Créer les visualisations avancées
 
 ## Intégration et tests
 - [ ] Intégrer les différents composants
