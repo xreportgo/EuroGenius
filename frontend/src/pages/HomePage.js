@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Container, 
@@ -13,6 +13,8 @@ import {
   CardContent,
   CardHeader,
   IconButton,
+  CircularProgress,
+  Alert,
   useTheme
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -21,77 +23,225 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import { NumberBall, StarBall, Combination } from '../components/LotteryComponents';
+import { useApi } from '../contexts/ApiContext';
 
 // Composant de la page d'accueil
 const HomePage = () => {
   const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   
-  // Données fictives pour la démo
-  const lastDraw = {
-    date: '23 Mars 2025',
-    numbers: [7, 12, 23, 34, 45],
-    stars: [3, 9],
-    jackpot: '130 000 000 €'
+  // Utilisation du contexte API
+  const { 
+    latestDraw, 
+    nextDraw, 
+    drawHistory, 
+    loading, 
+    error, 
+    refreshLatestDraw 
+  } = useApi();
+  
+  // Données dérivées pour les statistiques
+  const [hotNumbers, setHotNumbers] = useState([]);
+  const [coldNumbers, setColdNumbers] = useState([]);
+  const [hotStars, setHotStars] = useState([]);
+  const [coldStars, setColdStars] = useState([]);
+  const [recentTrends, setRecentTrends] = useState([]);
+  const [suggestedCombinations, setSuggestedCombinations] = useState([]);
+  
+  // Calcul des statistiques à partir de l'historique des tirages
+  useEffect(() => {
+    if (drawHistory && drawHistory.length > 0) {
+      calculateStatistics();
+    }
+  }, [drawHistory]);
+  
+  // Fonction pour calculer les statistiques
+  const calculateStatistics = () => {
+    // Comptage des fréquences des numéros
+    const numberCounts = {};
+    const starCounts = {};
+    
+    drawHistory.forEach(draw => {
+      // Comptage des numéros
+      draw.numbers.forEach(num => {
+        numberCounts[num] = (numberCounts[num] || 0) + 1;
+      });
+      
+      // Comptage des étoiles
+      draw.stars.forEach(star => {
+        starCounts[star] = (starCounts[star] || 0) + 1;
+      });
+    });
+    
+    // Conversion en tableaux pour le tri
+    const numberFrequencies = Object.entries(numberCounts).map(([number, count]) => ({
+      number: parseInt(number),
+      count
+    }));
+    
+    const starFrequencies = Object.entries(starCounts).map(([star, count]) => ({
+      star: parseInt(star),
+      count
+    }));
+    
+    // Tri par fréquence
+    numberFrequencies.sort((a, b) => b.count - a.count);
+    starFrequencies.sort((a, b) => b.count - a.count);
+    
+    // Sélection des numéros chauds et froids
+    setHotNumbers(numberFrequencies.slice(0, 5).map(item => item.number));
+    setColdNumbers(numberFrequencies.slice(-5).map(item => item.number));
+    setHotStars(starFrequencies.slice(0, 2).map(item => item.star));
+    setColdStars(starFrequencies.slice(-2).map(item => item.star));
+    
+    // Calcul des tendances récentes
+    const recentDraws = drawHistory.slice(0, 10);
+    
+    // Pourcentage de numéros pairs
+    const evenCount = recentDraws.reduce((count, draw) => {
+      return count + draw.numbers.filter(num => num % 2 === 0).length;
+    }, 0);
+    const totalNumbers = recentDraws.length * 5;
+    const evenPercentage = Math.round((evenCount / totalNumbers) * 100);
+    
+    // Pourcentage de numéros < 25
+    const lowCount = recentDraws.reduce((count, draw) => {
+      return count + draw.numbers.filter(num => num <= 25).length;
+    }, 0);
+    const lowPercentage = Math.round((lowCount / totalNumbers) * 100);
+    
+    // Calcul de l'écart maximal
+    let maxGap = 0;
+    for (let i = 1; i <= 50; i++) {
+      let lastSeen = -1;
+      for (let j = 0; j < recentDraws.length; j++) {
+        if (recentDraws[j].numbers.includes(i)) {
+          if (lastSeen === -1) {
+            lastSeen = j;
+          } else {
+            const gap = j - lastSeen;
+            if (gap > maxGap) {
+              maxGap = gap;
+            }
+            lastSeen = j;
+          }
+        }
+      }
+    }
+    
+    setRecentTrends([
+      { 
+        label: 'Numéros pairs', 
+        value: `${evenPercentage}%`, 
+        trend: evenPercentage > 50 ? 'up' : evenPercentage < 50 ? 'down' : 'neutral' 
+      },
+      { 
+        label: 'Numéros < 25', 
+        value: `${lowPercentage}%`, 
+        trend: lowPercentage > 50 ? 'up' : lowPercentage < 50 ? 'down' : 'neutral' 
+      },
+      { 
+        label: 'Écart max', 
+        value: `${maxGap} tirages`, 
+        trend: 'neutral' 
+      }
+    ]);
+    
+    // Génération de combinaisons suggérées (simplifiée)
+    // Dans une implémentation réelle, cela appellerait le backend avec les modèles IA
+    const combinations = [];
+    
+    // Combinaison basée sur les numéros chauds
+    combinations.push({
+      numbers: [...hotNumbers].sort((a, b) => a - b),
+      stars: [...hotStars].sort((a, b) => a - b),
+      confidence: 4.5
+    });
+    
+    // Combinaison équilibrée (mélange de chauds et froids)
+    const balancedNumbers = [
+      hotNumbers[0],
+      hotNumbers[1],
+      hotNumbers[2],
+      coldNumbers[0],
+      coldNumbers[1]
+    ].sort((a, b) => a - b);
+    
+    combinations.push({
+      numbers: balancedNumbers,
+      stars: [hotStars[0], coldStars[0]].sort((a, b) => a - b),
+      confidence: 4.2
+    });
+    
+    // Combinaison basée sur les numéros froids
+    combinations.push({
+      numbers: [...coldNumbers].sort((a, b) => a - b),
+      stars: [...coldStars].sort((a, b) => a - b),
+      confidence: 3.8
+    });
+    
+    setSuggestedCombinations(combinations);
   };
-  
-  const nextDraw = {
-    date: '26 Mars 2025',
-    jackpot: '145 000 000 €'
-  };
-  
-  const hotNumbers = [7, 15, 23, 31, 42];
-  const coldNumbers = [2, 11, 25, 38, 49];
-  const hotStars = [3, 8];
-  const coldStars = [1, 11];
-  
-  const recentTrends = [
-    { label: 'Numéros pairs', value: '52%', trend: 'up' },
-    { label: 'Numéros < 25', value: '48%', trend: 'down' },
-    { label: 'Écart max', value: '12 tirages', trend: 'neutral' }
-  ];
-  
-  const suggestedCombinations = [
-    { numbers: [3, 17, 23, 34, 42], stars: [2, 9], confidence: 4.5 },
-    { numbers: [7, 12, 19, 28, 45], stars: [3, 8], confidence: 4.2 },
-    { numbers: [5, 14, 27, 36, 41], stars: [5, 10], confidence: 3.8 }
-  ];
   
   // Gestionnaire de changement d'onglet
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
   
+  // Gestionnaire de rafraîchissement des données
+  const handleRefresh = () => {
+    refreshLatestDraw();
+  };
+  
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Message d'erreur */}
+      {error && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+      
       {/* En-tête avec dernier tirage et prochain jackpot */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardHeader 
               title="Dernier Tirage" 
-              subheader={lastDraw.date}
+              subheader={latestDraw ? latestDraw.date : "Chargement..."}
               action={
-                <IconButton aria-label="refresh">
-                  <RefreshIcon />
+                <IconButton aria-label="refresh" onClick={handleRefresh} disabled={loading}>
+                  {loading ? <CircularProgress size={24} /> : <RefreshIcon />}
                 </IconButton>
               }
             />
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                {lastDraw.numbers.map((number, index) => (
-                  <NumberBall key={index} selected sx={{ mx: 0.5 }}>
-                    {number}
-                  </NumberBall>
-                ))}
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                {lastDraw.stars.map((star, index) => (
-                  <StarBall key={index} selected sx={{ mx: 0.5 }}>
-                    {star}
-                  </StarBall>
-                ))}
-              </Box>
+              {loading && !latestDraw ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                  <CircularProgress />
+                </Box>
+              ) : latestDraw ? (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                    {latestDraw.numbers.map((number, index) => (
+                      <NumberBall key={index} selected sx={{ mx: 0.5 }}>
+                        {number}
+                      </NumberBall>
+                    ))}
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    {latestDraw.stars.map((star, index) => (
+                      <StarBall key={index} selected sx={{ mx: 0.5 }}>
+                        {star}
+                      </StarBall>
+                    ))}
+                  </Box>
+                </>
+              ) : (
+                <Typography variant="body1" align="center">
+                  Aucune donnée disponible
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -102,14 +252,26 @@ const HomePage = () => {
                 Prochain Tirage
               </Typography>
               <Typography variant="body2" color="textSecondary" gutterBottom>
-                {nextDraw.date}
+                {nextDraw ? nextDraw.date : "Chargement..."}
               </Typography>
-              <Typography variant="h3" color="primary" sx={{ my: 2, fontWeight: 'bold' }}>
-                {nextDraw.jackpot}
-              </Typography>
-              <Button variant="contained" color="primary" size="large">
-                Générer une Combinaison
-              </Button>
+              {loading && !nextDraw ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                  <CircularProgress />
+                </Box>
+              ) : nextDraw ? (
+                <>
+                  <Typography variant="h3" color="primary" sx={{ my: 2, fontWeight: 'bold' }}>
+                    {nextDraw.jackpot}
+                  </Typography>
+                  <Button variant="contained" color="primary" size="large">
+                    Générer une Combinaison
+                  </Button>
+                </>
+              ) : (
+                <Typography variant="body1" align="center">
+                  Aucune donnée disponible
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -139,11 +301,19 @@ const HomePage = () => {
                 Numéros Chauds
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, my: 2 }}>
-                {hotNumbers.map((number, index) => (
-                  <NumberBall key={index} isHot>
-                    {number}
-                  </NumberBall>
-                ))}
+                {loading ? (
+                  <CircularProgress />
+                ) : hotNumbers.length > 0 ? (
+                  hotNumbers.map((number, index) => (
+                    <NumberBall key={index} isHot>
+                      {number}
+                    </NumberBall>
+                  ))
+                ) : (
+                  <Typography variant="body1">
+                    Aucune donnée disponible
+                  </Typography>
+                )}
               </Box>
               <Typography variant="body2" color="textSecondary">
                 Les numéros chauds sont ceux qui apparaissent le plus fréquemment dans les tirages récents.
@@ -156,11 +326,19 @@ const HomePage = () => {
                 Numéros Froids
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, my: 2 }}>
-                {coldNumbers.map((number, index) => (
-                  <NumberBall key={index}>
-                    {number}
-                  </NumberBall>
-                ))}
+                {loading ? (
+                  <CircularProgress />
+                ) : coldNumbers.length > 0 ? (
+                  coldNumbers.map((number, index) => (
+                    <NumberBall key={index}>
+                      {number}
+                    </NumberBall>
+                  ))
+                ) : (
+                  <Typography variant="body1">
+                    Aucune donnée disponible
+                  </Typography>
+                )}
               </Box>
               <Typography variant="body2" color="textSecondary">
                 Les numéros froids sont ceux qui apparaissent le moins fréquemment dans les tirages récents.
@@ -173,11 +351,19 @@ const HomePage = () => {
                 Étoiles Chaudes
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, my: 2 }}>
-                {hotStars.map((star, index) => (
-                  <StarBall key={index} isHot>
-                    {star}
-                  </StarBall>
-                ))}
+                {loading ? (
+                  <CircularProgress />
+                ) : hotStars.length > 0 ? (
+                  hotStars.map((star, index) => (
+                    <StarBall key={index} isHot>
+                      {star}
+                    </StarBall>
+                  ))
+                ) : (
+                  <Typography variant="body1">
+                    Aucune donnée disponible
+                  </Typography>
+                )}
               </Box>
               <Typography variant="body2" color="textSecondary">
                 Les étoiles chaudes sont celles qui apparaissent le plus fréquemment dans les tirages récents.
@@ -190,11 +376,19 @@ const HomePage = () => {
                 Étoiles Froides
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, my: 2 }}>
-                {coldStars.map((star, index) => (
-                  <StarBall key={index}>
-                    {star}
-                  </StarBall>
-                ))}
+                {loading ? (
+                  <CircularProgress />
+                ) : coldStars.length > 0 ? (
+                  coldStars.map((star, index) => (
+                    <StarBall key={index}>
+                      {star}
+                    </StarBall>
+                  ))
+                ) : (
+                  <Typography variant="body1">
+                    Aucune donnée disponible
+                  </Typography>
+                )}
               </Box>
               <Typography variant="body2" color="textSecondary">
                 Les étoiles froides sont celles qui apparaissent le moins fréquemment dans les tirages récents.
@@ -235,17 +429,27 @@ const HomePage = () => {
                 Générées par notre système d'intelligence artificielle
               </Typography>
               
-              <Grid container spacing={2}>
-                {suggestedCombinations.map((combo, index) => (
-                  <Grid item xs={12} md={4} key={index}>
-                    <Combination 
-                      numbers={combo.numbers} 
-                      stars={combo.stars} 
-                      confidence={combo.confidence} 
-                    />
-                  </Grid>
-                ))}
-              </Grid>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : suggestedCombinations.length > 0 ? (
+                <Grid container spacing={2}>
+                  {suggestedCombinations.map((combo, index) => (
+                    <Grid item xs={12} md={4} key={index}>
+                      <Combination 
+                        numbers={combo.numbers} 
+                        stars={combo.stars} 
+                        confidence={combo.confidence} 
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Typography variant="body1" align="center">
+                  Aucune combinaison disponible
+                </Typography>
+              )}
               
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                 <Button 
@@ -253,6 +457,7 @@ const HomePage = () => {
                   color="primary" 
                   size="large"
                   startIcon={<RefreshIcon />}
+                  disabled={loading}
                 >
                   Générer de Nouvelles Combinaisons
                 </Button>
@@ -342,35 +547,45 @@ const HomePage = () => {
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
-              <Grid container spacing={2}>
-                {recentTrends.map((trend, index) => (
-                  <Grid item xs={12} md={4} key={index}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="h6">
-                            {trend.label}
-                          </Typography>
-                          <Typography 
-                            variant="h5" 
-                            color={
-                              trend.trend === 'up' 
-                                ? 'success.main' 
-                                : trend.trend === 'down' 
-                                  ? 'error.main' 
-                                  : 'text.secondary'
-                            }
-                          >
-                            {trend.value}
-                            {trend.trend === 'up' && ' ↑'}
-                            {trend.trend === 'down' && ' ↓'}
-                          </Typography>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : recentTrends.length > 0 ? (
+                <Grid container spacing={2}>
+                  {recentTrends.map((trend, index) => (
+                    <Grid item xs={12} md={4} key={index}>
+                      <Card variant="outlined">
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="h6">
+                              {trend.label}
+                            </Typography>
+                            <Typography 
+                              variant="h5" 
+                              color={
+                                trend.trend === 'up' 
+                                  ? 'success.main' 
+                                  : trend.trend === 'down' 
+                                    ? 'error.main' 
+                                    : 'text.secondary'
+                              }
+                            >
+                              {trend.value}
+                              {trend.trend === 'up' && ' ↑'}
+                              {trend.trend === 'down' && ' ↓'}
+                            </Typography>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Typography variant="body1" align="center">
+                  Aucune tendance disponible
+                </Typography>
+              )}
               
               <Box sx={{ mt: 3 }}>
                 <Typography variant="h6" gutterBottom>

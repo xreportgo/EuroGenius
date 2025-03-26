@@ -38,9 +38,9 @@
 - [x] Créer les visualisations avancées
 
 ## Intégration et tests
-- [ ] Intégrer les différents composants
-- [ ] Mettre en place l'API Pedro Mealha
-- [ ] Effectuer des tests unitaires
+- [x] Intégrer les différents composants
+- [x] Mettre en place l'API Pedro Mealha
+- [x] Effectuer des tests unitaires
 - [ ] Réaliser des tests d'intégration
 
 ## Documentation
