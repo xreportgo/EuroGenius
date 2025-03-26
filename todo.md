@@ -44,7 +44,7 @@
 - [x] Réaliser des tests d'intégration
 
 ## Documentation
-- [ ] Rédiger la documentation technique
-- [ ] Créer le manuel utilisateur
-- [ ] Documenter l'API
-- [ ] Préparer le guide de déploiement
+- [x] Rédiger la documentation technique
+- [x] Créer le manuel utilisateur
+- [x] Documenter l'API
+- [x] Préparer le guide de déploiement
