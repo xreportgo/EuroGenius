@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Service pour le frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://backend:3001
+      - REACT_APP_ML_API_URL=http://ml-service:5000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  # Service pour le backend Node.js
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/eurogenius
+      - ML_API_URL=http://ml-service:5000
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # Service pour la base de données PostgreSQL
+  postgres:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=eurogenius
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./database/seeds/init.sql:/docker-entrypoint-initdb.d/2-init.sql
+
+  # Service pour les modèles ML Python
+  ml-service:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/eurogenius
+    volumes:
+      - ./ml:/app
+      - /app/.venv
+
+  # Service Nginx pour le proxy inverse
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+      - ml-service
+    volumes:
+      - ./deployment/nginx/eurogenius.conf:/etc/nginx/conf.d/default.conf
+      - ./deployment/ssl:/etc/nginx/ssl
+    restart: always
+
+volumes:
+  postgres_data:
