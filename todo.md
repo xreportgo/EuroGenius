@@ -14,10 +14,10 @@
 - [x] Mettre en place le système de contrôle de version
 
 ## Base de données
-- [ ] Concevoir le schéma de la base de données
-- [ ] Définir les tables et leurs relations
-- [ ] Implémenter la structure SQL
-- [ ] Créer les scripts d'initialisation
+- [x] Concevoir le schéma de la base de données
+- [x] Définir les tables et leurs relations
+- [x] Implémenter la structure SQL
+- [x] Créer les scripts d'initialisation
 
 ## Analyse statistique
 - [ ] Développer les algorithmes d'analyse statistique de base
