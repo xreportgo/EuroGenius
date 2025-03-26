@@ -20,10 +20,10 @@
 - [x] Créer les scripts d'initialisation
 
 ## Analyse statistique
-- [ ] Développer les algorithmes d'analyse statistique de base
-- [ ] Implémenter l'analyse des fréquences
-- [ ] Créer le système d'analyse des paires/triplets
-- [ ] Développer l'analyse des intervalles
+- [x] Développer les algorithmes d'analyse statistique de base
+- [x] Implémenter l'analyse des fréquences
+- [x] Créer le système d'analyse des paires/triplets
+- [x] Développer l'analyse des intervalles
 
 ## Modèles IA
 - [ ] Concevoir l'architecture des modèles IA
