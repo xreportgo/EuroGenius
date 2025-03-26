@@ -41,7 +41,7 @@
 - [x] Intégrer les différents composants
 - [x] Mettre en place l'API Pedro Mealha
 - [x] Effectuer des tests unitaires
-- [ ] Réaliser des tests d'intégration
+- [x] Réaliser des tests d'intégration
 
 ## Documentation
 - [ ] Rédiger la documentation technique
