@@ -26,10 +26,10 @@
 - [x] Développer l'analyse des intervalles
 
 ## Modèles IA
-- [ ] Concevoir l'architecture des modèles IA
-- [ ] Implémenter le modèle LSTM pour les numéros principaux
-- [ ] Développer le modèle pour les étoiles
-- [ ] Créer l'algorithme génétique pour les combinaisons rares
+- [x] Concevoir l'architecture des modèles IA
+- [x] Implémenter le modèle LSTM pour les numéros principaux
+- [x] Développer le modèle pour les étoiles
+- [x] Créer l'algorithme génétique pour les combinaisons rares
 
 ## Interface utilisateur
 - [ ] Concevoir les maquettes de l'interface
